@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "api-ml"
+version = "0.1.0"
+description = ""
+authors = ["KGFSB_spy <sacrumterra@yandex.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = ">=0.68.0"
+uvicorn = ">=0.15.0"
+python-jose = {version = ">=3.3.0", extras = ["cryptography"]}
+passlib = {version = ">=1.7.4", extras = ["bcrypt"]}
+sqlalchemy = ">=1.4.0"
+psycopg2-binary = ">=2.9.0"
+python-multipart = ">=0.0.5"
+pydantic = {extras = ["email"], version = "^2.11.4"}
+pandas = "^2.2.3"
+scikit-learn = "^1.6.1"
+joblib = "^1.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
