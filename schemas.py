@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from typing import Literal
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -10,4 +11,7 @@ class UserLogin(BaseModel):
 
 class PredictionRequest(BaseModel):
     text: str
-    model_type: str = "basic"
+    model_type: Literal["basic", "medium"] = Field(
+        default="basic",
+        description="Допустимые значения: basic, medium"
+    )

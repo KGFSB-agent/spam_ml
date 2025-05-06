@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from database import get_db, Base, SessionLocal, engine
 from schemas import UserCreate, UserLogin, PredictionRequest
 from models import User, PredictionHistory
-from ml_models.basic_model import BasicSpamModel
+from ml_models.models.basic_model import BasicSpamModel
+from ml_models.models.medium_model import MediumSpamModel
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from security import SECRET_KEY, ALGORITHM, verify_password, create_access_token, credentials_exception, get_password_hash
@@ -108,25 +109,39 @@ async def predict(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)  # TODO: реализовать
 ):
-    # Проверка баланса
-    if current_user.balance < 100:
-        raise HTTPException(status_code=400, detail="Недостаточно средств")
+    # Выбор модели и стоимости
+    model_map = {
+        "basic": (BasicSpamModel, 100),
+        "medium": (MediumSpamModel, 250)
+    }
+
+    if request.model_type not in model_map:
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid model type. Use 'basic' or 'medium'."
+        )
     
-    # Выполнение предсказания
-    model = BasicSpamModel()
+    model_class, cost = model_map[request.model_type]
+
+    # Проверка баланса
+    if current_user.balance < cost:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
+
+    # Предсказание
+    model = model_class()
     is_spam = model.predict(request.text)
     
     # Списание средств
-    current_user.balance -= model.cost
+    current_user.balance -= cost
     db.commit()
     
     # Логирование
     db_prediction = PredictionHistory(
         user_id=current_user.id,
         text=request.text,
-        model_type="basic",
+        model_type=request.model_type,
         is_spam=is_spam,
-        cost=model.cost
+        cost=cost
     )
     db.add(db_prediction)
     db.commit()
