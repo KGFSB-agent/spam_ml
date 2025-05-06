@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
-from database import Base
+from db.database import Base
 from datetime import datetime, timezone, timedelta
 
 class User(Base):

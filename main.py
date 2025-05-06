@@ -1,16 +1,18 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from database import get_db, Base, SessionLocal, engine
-from schemas import UserCreate, UserLogin, PredictionRequest
-from models import User, PredictionHistory
+from db.database import get_db, Base, SessionLocal, engine
+from db.schemas import UserCreate, UserLogin, PredictionRequest
+from db.models import User, PredictionHistory
 from ml_models.models.basic_model import BasicSpamModel
 from ml_models.models.medium_model import MediumSpamModel
+from ml_models.models.premium_model import PremiumSpamModel
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from security import SECRET_KEY, ALGORITHM, verify_password, create_access_token, credentials_exception, get_password_hash
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Union
 
 
 @asynccontextmanager
@@ -107,46 +109,72 @@ async def add_credits(
 async def predict(
     request: PredictionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # TODO: реализовать
+    current_user: User = Depends(get_current_user)
 ):
-    # Выбор модели и стоимости
-    model_map = {
-        "basic": (BasicSpamModel, 100),
-        "medium": (MediumSpamModel, 250)
-    }
-
-    if request.model_type not in model_map:
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid model type. Use 'basic' or 'medium'."
+    try:
+        model_map = {
+            "basic": (BasicSpamModel, 100),
+            "medium": (MediumSpamModel, 250),
+            "premium": (PremiumSpamModel, 500)  # Добавлено для Premium
+        }
+        
+        if request.model_type not in model_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid model type. Use 'basic', 'medium' or 'premium'."
+            )
+        
+        model_class, cost = model_map[request.model_type]
+        
+        # Проверка баланса
+        if current_user.balance < cost:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Недостаточно средств"
+            )
+        
+        # Инициализация модели с обработкой ошибок
+        try:
+            model = model_class()
+        except FileNotFoundError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Модель {request.model_type} недоступна: {str(e)}"
+            )
+        
+        # Предсказание
+        try:
+            is_spam = model.predict(request.text)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Ошибка предсказания: {str(e)}"
+            )
+        
+        # Списание средств только после успешного предсказания
+        current_user.balance -= cost
+        db.commit()
+        
+        # Логирование
+        db_prediction = PredictionHistory(
+            user_id=current_user.id,
+            text=request.text,
+            model_type=request.model_type,
+            is_spam=is_spam,
+            cost=cost
         )
-    
-    model_class, cost = model_map[request.model_type]
+        db.add(db_prediction)
+        db.commit()
+        
+        return {"is_spam": is_spam, "remaining_balance": current_user.balance}
 
-    # Проверка баланса
-    if current_user.balance < cost:
-        raise HTTPException(status_code=400, detail="Недостаточно средств")
-
-    # Предсказание
-    model = model_class()
-    is_spam = model.predict(request.text)
-    
-    # Списание средств
-    current_user.balance -= cost
-    db.commit()
-    
-    # Логирование
-    db_prediction = PredictionHistory(
-        user_id=current_user.id,
-        text=request.text,
-        model_type=request.model_type,
-        is_spam=is_spam,
-        cost=cost
-    )
-    db.add(db_prediction)
-    db.commit()
-    
-    return {"is_spam": is_spam, "remaining_balance": current_user.balance}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Неизвестная ошибка: {str(e)}"
+        )
 
 
 @app.get("/prediction_history")

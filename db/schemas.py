@@ -11,7 +11,8 @@ class UserLogin(BaseModel):
 
 class PredictionRequest(BaseModel):
     text: str
-    model_type: Literal["basic", "medium"] = Field(
+    model_type: Literal["basic", "medium", "premium"] = Field(
         default="basic",
-        description="Допустимые значения: basic, medium"
+        example="basic",
+        description="Доступные модели: basic, medium, premium"
     )
