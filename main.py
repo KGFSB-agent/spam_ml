@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Body
 from sqlalchemy.orm import Session
 from db.database import get_db, Base, engine
 from db.schemas import UserCreate, PredictionRequest
@@ -7,10 +7,19 @@ from ml_models.models.basic_model import BasicSpamModel
 from ml_models.models.medium_model import MediumSpamModel
 from ml_models.models.premium_model import PremiumSpamModel
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from security import SECRET_KEY, ALGORITHM, verify_password, create_access_token, get_password_hash
 from contextlib import asynccontextmanager
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
+from fastapi.responses import HTMLResponse
+
+
+static_path = str(Path("frontend") / "static")
+templates_path = str(Path("frontend") / "templates")
 
 
 @asynccontextmanager
@@ -22,6 +31,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+templates = Jinja2Templates(directory=templates_path)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme), 
@@ -44,6 +62,11 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/register")
@@ -90,7 +113,7 @@ async def get_balance(
 
 @app.post("/add_credits")
 async def add_credits(
-    amount: float,
+    amount: float = Body(..., embed=True),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -115,7 +138,7 @@ async def predict(
         if request.model_type not in model_map:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid model type. Use 'basic', 'medium' or 'premium'."
+                detail="Недопустимый тип модели. Используйте 'basic', 'medium' или 'premium'."
             )
         
         model_class, cost = model_map[request.model_type]

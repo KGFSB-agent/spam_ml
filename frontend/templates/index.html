@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spam Detection Service</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div id="auth-section">
+            <h2>Welcome to Spam Shield</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('register')">Register</button>
+            </div>
+            
+            <div id="login-form">
+                <input type="email" id="login-email" placeholder="Email">
+                <input type="password" id="login-password" placeholder="Password">
+                <button onclick="login()">Sign In</button>
+            </div>
+
+            <div id="register-form" style="display:none;">
+                <input type="email" id="register-email" placeholder="Email">
+                <input type="password" id="register-password" placeholder="Password">
+                <button onclick="register()">Create Account</button>
+            </div>
+        </div>
+
+        <div id="main-interface" style="display:none;">
+            <div class="header">
+                <h2>Spam Detection Panel</h2>
+                <div class="user-info">
+                    <div class="user-details">
+                        <span id="user-email"></span>
+                        <span id="user-balance"></span>
+                    </div>
+                    <div class="user-controls">
+                        <div class="credit-control">
+                            <input type="number" id="credit-amount" placeholder="Amount" min="0" step="100">
+                            <button onclick="addCredits()">Add Credits</button>
+                        </div>
+                        <button class="logout-btn" onclick="logout()">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detection-area">
+                <textarea id="input-text" placeholder="Enter text to analyze..."></textarea>
+                <select id="model-select">
+                    <option value="basic">Basic Model (100 credits)</option>
+                    <option value="medium">Medium Model (250 credits)</option>
+                    <option value="premium">Premium Model (500 credits)</option>
+                </select>
+                <button onclick="analyze()">Check for Spam</button>
+                <div id="result"></div>
+            </div>
+
+            <div class="analytics">
+                <h3>Usage Statistics</h3>
+                <div id="stats">
+                    <div>Total Predictions: <span id="total-predictions">0</span></div>
+                    <div>Total Spam: <span id="total-spam">0</span></div>
+                    <div>Total Credits Spent: <span id="total-credits">0</span></div>
+                </div>
+            </div>
+
+            <div class="history">
+                <h3>Analysis History</h3>
+                <div id="history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
