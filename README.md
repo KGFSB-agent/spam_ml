@@ -27,7 +27,7 @@ poetry install
 2. Создайте файл .env в корне проекта:
 ```env
 DATABASE_URL = "postgresql://your_user:your_password@localhost:5432/your_db_name" - URL подключения к БД
-SECRET_KEY=your_secret_key - секретный ключ для подписи JWT
+SECRET_KEY = "your_secret_key" - секретный ключ для подписи JWT
 ```
 
 3. Запустите приложение:
