@@ -5,7 +5,7 @@ from transformers import (
     Trainer,
     TrainingArguments
 )
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -13,23 +13,17 @@ from sklearn.metrics import accuracy_score
 from datasets import DatasetDict
 
 
-# Пути
 csv_spam_path = Path("db") / "data" / "spam.csv"
 model_save_path = Path("ml_models") / "models_data" / "premium_spam_model"
-# BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# DATA_PATH = BASE_DIR / "db" / "data" / "spam.csv"
-# MODEL_SAVE_PATH = BASE_DIR / "ml_models" / "premium_spam_model"
+
 
 def load_and_prepare_data():
-    # Чтение и подготовка данных
     df = pd.read_csv(csv_spam_path, encoding="latin-1")[["v1", "v2"]]
     df.columns = ["label", "text"]
     df["label"] = df["label"].map({"ham": 0, "spam": 1})
     
-    # Разделение данных
     train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
     
-    # Создание Dataset объектов
     train_dataset = Dataset.from_pandas(train_df)
     test_dataset = Dataset.from_pandas(test_df)
     
@@ -53,7 +47,6 @@ def train_model():
     dataset = load_and_prepare_data()
     tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
     
-    # Токенизация
     tokenized_dataset = dataset.map(
         lambda x: tokenizer(x["text"], padding="max_length", truncation=True),
         batched=True

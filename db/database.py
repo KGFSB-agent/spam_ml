@@ -3,16 +3,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import logging
 
-# Настройка логирования
+from settings import config
+
+
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-# Используем ваши данные
-DATABASE_URL = "postgresql://api_user:admin@localhost:5432/spam_db"
+DATABASE_URL = config.DATABASE_URL
 
 Base = declarative_base()
 
-# Создаём engine с явным указанием клиентской кодировки
 engine = create_engine(
     DATABASE_URL,
     echo=True,

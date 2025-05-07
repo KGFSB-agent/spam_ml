@@ -4,8 +4,10 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status
 from typing import Optional
 
+from settings import config
 
-SECRET_KEY = "pxaoEKlUqLsx4yhAIho/wdPRivKxJpLz"
+
+SECRET_KEY = config.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

@@ -1,4 +1,4 @@
-from transformers import pipeline, DistilBertForSequenceClassification, DistilBertTokenizer
+from transformers import DistilBertForSequenceClassification, DistilBertTokenizer
 from pathlib import Path
 import torch
 
@@ -16,4 +16,4 @@ class PremiumSpamModel:
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, padding=True)
         outputs = self.model(**inputs)
         pred = torch.argmax(outputs.logits).item()
-        return bool(pred)  # 1 = спам, 0 = не спам
+        return bool(pred)

@@ -1,18 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from db.database import get_db, Base, SessionLocal, engine
-from db.schemas import UserCreate, UserLogin, PredictionRequest
+from db.database import get_db, Base, engine
+from db.schemas import UserCreate, PredictionRequest
 from db.models import User, PredictionHistory
 from ml_models.models.basic_model import BasicSpamModel
 from ml_models.models.medium_model import MediumSpamModel
 from ml_models.models.premium_model import PremiumSpamModel
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from security import SECRET_KEY, ALGORITHM, verify_password, create_access_token, credentials_exception, get_password_hash
-from datetime import datetime, timezone
+from security import SECRET_KEY, ALGORITHM, verify_password, create_access_token, get_password_hash
 from contextlib import asynccontextmanager
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Union
 
 
 @asynccontextmanager
@@ -36,20 +34,18 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")  # Используем email вместо username
+        email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
     
-    # Получаем пользователя из БД по email
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
     return user
 
 
-# Регистрация пользователя
 @app.post("/register")
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -67,7 +63,6 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"message": "Пользователь успешно создан"}
 
 
-# Эндпоинт для получения токена (OAuth2 стандарт)
 @app.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -104,7 +99,6 @@ async def add_credits(
     return {"message": "Баланс пополнен", "new_balance": current_user.balance}
 
 
-# Prediction endpoint
 @app.post("/predict")
 async def predict(
     request: PredictionRequest,
@@ -115,7 +109,7 @@ async def predict(
         model_map = {
             "basic": (BasicSpamModel, 100),
             "medium": (MediumSpamModel, 250),
-            "premium": (PremiumSpamModel, 500)  # Добавлено для Premium
+            "premium": (PremiumSpamModel, 500)
         }
         
         if request.model_type not in model_map:
@@ -126,14 +120,12 @@ async def predict(
         
         model_class, cost = model_map[request.model_type]
         
-        # Проверка баланса
         if current_user.balance < cost:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Недостаточно средств"
             )
         
-        # Инициализация модели с обработкой ошибок
         try:
             model = model_class()
         except FileNotFoundError as e:
@@ -151,11 +143,9 @@ async def predict(
                 detail=f"Ошибка предсказания: {str(e)}"
             )
         
-        # Списание средств только после успешного предсказания
         current_user.balance -= cost
         db.commit()
         
-        # Логирование
         db_prediction = PredictionHistory(
             user_id=current_user.id,
             text=request.text,
